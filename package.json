@@ -10,6 +10,8 @@
     "Other"
   ],
   "activationEvents": [
+    "onLanguage:plaintext",
+    "onLanguage:markdown",
     "onCommand:writerRefactor.registerSelectedText",
     "onCommand:writerRefactor.unregisterSelectedText",
     "onCommand:writerRefactor.renameSelectedEntry",
