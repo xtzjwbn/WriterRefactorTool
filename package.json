@@ -1,7 +1,7 @@
 {
   "name": "WriterRefactorTool",
   "displayName": "WriterRefactorTool",
-  "description": "WriterRefactorTool",
+  "description": "Refactor-like name registration and rename for novel writing",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.106.0"
@@ -9,15 +9,95 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:writerRefactor.registerSelectedText",
+    "onCommand:writerRefactor.unregisterSelectedText",
+    "onCommand:writerRefactor.renameSelectedEntry",
+    "onCommand:writerRefactor.openRegistry"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "WriterRefactorTool.helloWorld",
-        "title": "Hello World"
+        "command": "writerRefactor.registerSelectedText",
+        "title": "Writer Refactor: Register Selected Text"
+      },
+      {
+        "command": "writerRefactor.unregisterSelectedText",
+        "title": "Writer Refactor: Unregister Selected Text"
+      },
+      {
+        "command": "writerRefactor.renameSelectedEntry",
+        "title": "Writer Refactor: Rename Current Refactor Object"
+      },
+      {
+        "command": "writerRefactor.openRegistry",
+        "title": "Writer Refactor: Open Registry JSON"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "writerRefactor.registerSelectedText",
+          "when": "editorTextFocus && editorHasSelection"
+        },
+        {
+          "command": "writerRefactor.unregisterSelectedText",
+          "when": "editorTextFocus && editorHasSelection"
+        },
+        {
+          "command": "writerRefactor.renameSelectedEntry",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Writer Refactor",
+      "properties": {
+        "writerRefactor.matchMode": {
+          "type": "string",
+          "enum": [
+            "wholeWord",
+            "substring"
+          ],
+          "default": "substring",
+          "description": "Matching mode for rename operations."
+        },
+        "writerRefactor.registryPath": {
+          "type": "string",
+          "default": ".writer-refactor/registry.json",
+          "description": "Path to registry JSON relative to workspace root."
+        },
+        "writerRefactor.excludeRules": {
+          "type": "object",
+          "default": {
+            "excludeFencedCode": true,
+            "excludeInlineCode": true,
+            "customRegex": []
+          },
+          "properties": {
+            "excludeFencedCode": {
+              "type": "boolean",
+              "default": true,
+              "description": "Exclude markdown fenced code blocks from rename."
+            },
+            "excludeInlineCode": {
+              "type": "boolean",
+              "default": true,
+              "description": "Exclude markdown inline code from rename."
+            },
+            "customRegex": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Custom regex rules that define excluded ranges."
+            }
+          }
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
