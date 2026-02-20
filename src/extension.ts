@@ -26,6 +26,7 @@ let isProductionMode = false;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	isProductionMode = context.extensionMode === vscode.ExtensionMode.Production;
+	await setCommandContexts(false, false, false);
 	highlightDecoration = vscode.window.createTextEditorDecorationType({
 		color: new vscode.ThemeColor('editorWarning.foreground'),
 		backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
@@ -207,6 +208,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.onDidChangeTextEditorSelection(async (event) => {
 			const workspaceFolder = getWorkspaceFolder();
 			if (!workspaceFolder) {
+				await setCommandContexts(false, false, false);
 				return;
 			}
 			await updateEditorHighlight(event.textEditor, workspaceFolder);
@@ -215,8 +217,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+			if (!editor) {
+				await setCommandContexts(false, false, false);
+				return;
+			}
 			const workspaceFolder = getWorkspaceFolder();
-			if (!workspaceFolder || !editor) {
+			if (!workspaceFolder) {
+				await setCommandContexts(false, false, false);
 				return;
 			}
 			await updateEditorHighlight(editor, workspaceFolder);
@@ -458,19 +465,39 @@ async function updateEditorHighlight(editor: vscode.TextEditor, folder: vscode.W
 	}
 	if (!isSupportedDocument(editor.document)) {
 		editor.setDecorations(highlightDecoration, []);
-		return;
-	}
-	const selectedText = editor.document.getText(editor.selection).trim();
-	if (!selectedText) {
-		editor.setDecorations(highlightDecoration, []);
+		await setCommandContexts(false, false, false);
 		return;
 	}
 	const registry = await loadRegistry(folder);
-	const isRegistered = registry.entries.some((entry) => entry.text === selectedText);
-	if (!isRegistered) {
+	const registeredTexts = registry.entries.map((entry) => entry.text);
+
+	const selectedText = editor.document.getText(editor.selection).trim();
+	const hasSelection = selectedText.length > 0;
+	const selectedIsRegistered = hasSelection && registeredTexts.includes(selectedText);
+	let highlightText = selectedText;
+	if (!highlightText) {
+		const targetAtCursor = findRegisteredTargetAtPosition(
+			editor.document,
+			editor.selection.active,
+			registeredTexts,
+		);
+		highlightText = targetAtCursor?.text ?? '';
+	}
+
+
+	// todo : 这里register和unregister的显隐其实还需要盘一下
+	if (!highlightText || !registeredTexts.includes(highlightText)) {
 		editor.setDecorations(highlightDecoration, []);
+		await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, false);
 		return;
 	}
-	const ranges = findMatchRanges(editor.document, selectedText);
+	const ranges = findMatchRanges(editor.document, highlightText);
 	editor.setDecorations(highlightDecoration, ranges);
+	await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, true);
+}
+
+async function setCommandContexts(canRegister: boolean, canUnregister: boolean, canRename: boolean): Promise<void> {
+	await vscode.commands.executeCommand('setContext', 'writerRefactor.canRegister', canRegister);
+	await vscode.commands.executeCommand('setContext', 'writerRefactor.canUnregister', canUnregister);
+	await vscode.commands.executeCommand('setContext', 'writerRefactor.canRename', canRename);
 }

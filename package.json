@@ -41,15 +41,15 @@
       "editor/context": [
         {
           "command": "writerRefactor.registerSelectedText",
-          "when": "editorTextFocus && editorHasSelection"
+          "when": "editorTextFocus && writerRefactor.canRegister"
         },
         {
           "command": "writerRefactor.unregisterSelectedText",
-          "when": "editorTextFocus && editorHasSelection"
+          "when": "editorTextFocus && writerRefactor.canUnregister"
         },
         {
           "command": "writerRefactor.renameSelectedEntry",
-          "when": "editorTextFocus"
+          "when": "editorTextFocus && writerRefactor.canRename"
         }
       ]
     },
