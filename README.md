@@ -36,7 +36,8 @@
 - `writerRefactor.matchMode`
   - `substring`（默认）或 `wholeWord`
 - `writerRefactor.registryPath`
-  - 注册表路径，默认：`.writer-refactor/registry.json`
+  - 注册表路径（相对扩展私有存储目录），默认：`registry.json`
+  - 每个 workspace 会使用独立子目录，因此不会共用同一个 JSON
 - `writerRefactor.excludeRules`
   - `excludeFencedCode`：排除 Markdown 围栏代码块
   - `excludeInlineCode`：排除 Markdown 行内代码

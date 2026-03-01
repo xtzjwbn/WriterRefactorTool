@@ -1,4 +1,5 @@
-﻿import * as path from 'path';
+import * as path from 'path';
+import { createHash } from 'crypto';
 import * as vscode from 'vscode';
 
 type MatchMode = 'wholeWord' | 'substring';
@@ -39,12 +40,14 @@ interface HighlightColors {
 	weak: HighlightColorRule;
 }
 
-const DEFAULT_REGISTRY_PATH = '.writer-refactor/registry.json';
+const DEFAULT_REGISTRY_PATH = 'registry.json';
 let highlightDecorationStrong: vscode.TextEditorDecorationType | undefined;
 let highlightDecorationWeak: vscode.TextEditorDecorationType | undefined;
 let idSequence = 0;
+let registryStorageRoot: vscode.Uri | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	registryStorageRoot = context.globalStorageUri;
 	await setCommandContexts(false, false, false, false, false);
 	refreshHighlightDecorations();
 
@@ -387,7 +390,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			refreshHighlightDecorations();
 			const workspaceFolder = getWorkspaceFolder();
 			const editor = vscode.window.activeTextEditor;
-			if (!workspaceFolder || !editor) {
+			if (!workspaceFolder) {
+				return;
+			}
+			if (!editor) {
 				return;
 			}
 			await updateEditorHighlight(editor, workspaceFolder);
@@ -406,8 +412,17 @@ function getWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
 
 function getRegistryUri(folder: vscode.WorkspaceFolder): vscode.Uri {
 	const configured = vscode.workspace.getConfiguration('writerRefactor').get<string>('registryPath');
-	const relativePath = configured && configured.trim().length > 0 ? configured.trim() : DEFAULT_REGISTRY_PATH;
-	return vscode.Uri.joinPath(folder.uri, relativePath);
+	const relativePath = configured && configured.trim().length > 0
+		? configured.trim().replace(/^[/\\]+/, '')
+		: DEFAULT_REGISTRY_PATH;
+	const base = registryStorageRoot ?? vscode.Uri.joinPath(vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file('.'), '.writer-refactor');
+	const workspaceBase = vscode.Uri.joinPath(base, getWorkspaceStorageKey(folder));
+	return vscode.Uri.joinPath(workspaceBase, relativePath);
+}
+
+function getWorkspaceStorageKey(folder: vscode.WorkspaceFolder): string {
+	const hash = createHash('sha256').update(folder.uri.toString()).digest('hex').slice(0, 16);
+	return `workspace-${hash}`;
 }
 
 async function ensureRegistryExists(folder: vscode.WorkspaceFolder): Promise<void> {

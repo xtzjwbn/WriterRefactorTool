@@ -103,8 +103,8 @@
         },
         "writerRefactor.registryPath": {
           "type": "string",
-          "default": ".writer-refactor/registry.json",
-          "description": "Path to registry JSON relative to workspace root."
+          "default": "registry.json",
+          "description": "Path to registry JSON relative to extension private storage."
         },
         "writerRefactor.excludeRules": {
           "type": "object",
