@@ -24,9 +24,10 @@
 
 ## 命令列表
 
-- `Writer Refactor: 注册选中文本`
-- `Writer Refactor: 将选中文本注册为别名`
-- `Writer Refactor: 取消注册选中文本`
+- `Writer Refactor: 注册角色`
+- `Writer Refactor: 注册别名`
+- `Writer Refactor: 取消注册别名`
+- `Writer Refactor: 取消注册角色`
 - `Writer Refactor: 重命名当前对象`
 - `Writer Refactor: 打开注册表 JSON`
 
@@ -40,6 +41,30 @@
   - `excludeFencedCode`：排除 Markdown 围栏代码块
   - `excludeInlineCode`：排除 Markdown 行内代码
   - `customRegex`：自定义排除正则
+- `writerRefactor.highlightColors`
+  - 支持普通颜色（如 `#ffd54f`、`rgba(255,213,79,.35)`）
+  - 也支持主题色令牌：`theme:<token>`，如 `theme:editor.wordHighlightBackground`
+
+示例：
+
+```json
+{
+  "writerRefactor.highlightColors": {
+    "strong": {
+      "color": "#1f1300",
+      "backgroundColor": "rgba(255, 213, 79, 0.65)",
+      "borderColor": "#ff9800",
+      "overviewRulerColor": "#ffb300"
+    },
+    "weak": {
+      "color": "theme:editor.foreground",
+      "backgroundColor": "rgba(255, 213, 79, 0.25)",
+      "borderColor": "rgba(255, 152, 0, 0.55)",
+      "overviewRulerColor": "rgba(255, 213, 79, 0.35)"
+    }
+  }
+}
+```
 
 ## 注册表结构
 

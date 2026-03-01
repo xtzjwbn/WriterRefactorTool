@@ -12,9 +12,10 @@
   "activationEvents": [
     "onLanguage:plaintext",
     "onLanguage:markdown",
-    "onCommand:writerRefactor.registerSelectedText",
-    "onCommand:writerRefactor.registerSelectedTextAsAlias",
-    "onCommand:writerRefactor.unregisterSelectedText",
+    "onCommand:writerRefactor.registerSelectedRole",
+    "onCommand:writerRefactor.registerSelectedAlias",
+    "onCommand:writerRefactor.unregisterSelectedAlias",
+    "onCommand:writerRefactor.unregisterSelectedCharacter",
     "onCommand:writerRefactor.renameSelectedEntry",
     "onCommand:writerRefactor.openRegistry"
   ],
@@ -22,16 +23,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "writerRefactor.registerSelectedText",
-        "title": "Writer Refactor: 注册选中文本"
+        "command": "writerRefactor.registerSelectedRole",
+        "title": "Writer Refactor: 注册角色"
       },
       {
-        "command": "writerRefactor.unregisterSelectedText",
-        "title": "Writer Refactor: 取消注册选中文本"
+        "command": "writerRefactor.registerSelectedAlias",
+        "title": "Writer Refactor: 注册别名"
       },
       {
-        "command": "writerRefactor.registerSelectedTextAsAlias",
-        "title": "Writer Refactor: 将选中文本注册为别名"
+        "command": "writerRefactor.unregisterSelectedAlias",
+        "title": "Writer Refactor: 取消注册别名"
+      },
+      {
+        "command": "writerRefactor.unregisterSelectedCharacter",
+        "title": "Writer Refactor: 取消注册角色"
       },
       {
         "command": "writerRefactor.renameSelectedEntry",
@@ -45,16 +50,20 @@
     "menus": {
       "editor/context": [
         {
-          "command": "writerRefactor.registerSelectedText",
+          "command": "writerRefactor.registerSelectedRole",
           "when": "editorTextFocus && writerRefactor.canRegister"
         },
         {
-          "command": "writerRefactor.unregisterSelectedText",
-          "when": "editorTextFocus && writerRefactor.canUnregister"
+          "command": "writerRefactor.registerSelectedAlias",
+          "when": "editorTextFocus && writerRefactor.canRegisterAlias"
         },
         {
-          "command": "writerRefactor.registerSelectedTextAsAlias",
-          "when": "editorTextFocus && writerRefactor.canRegisterAlias"
+          "command": "writerRefactor.unregisterSelectedAlias",
+          "when": "editorTextFocus && writerRefactor.canUnregisterAlias"
+        },
+        {
+          "command": "writerRefactor.unregisterSelectedCharacter",
+          "when": "editorTextFocus && writerRefactor.canUnregisterCharacter"
         },
         {
           "command": "writerRefactor.renameSelectedEntry",
@@ -104,6 +113,68 @@
               },
               "default": [],
               "description": "Custom regex rules that define excluded ranges."
+            }
+          }
+        },
+        "writerRefactor.highlightColors": {
+          "type": "object",
+          "default": {
+            "strong": {
+              "color": "theme:editorWarning.foreground",
+              "backgroundColor": "theme:editor.wordHighlightBackground",
+              "borderColor": "theme:editor.wordHighlightStrongBorder",
+              "overviewRulerColor": "theme:editor.findMatchHighlightBackground"
+            },
+            "weak": {
+              "color": "theme:editor.foreground",
+              "backgroundColor": "theme:editor.wordHighlightTextBackground",
+              "borderColor": "theme:editor.wordHighlightBorder",
+              "overviewRulerColor": "theme:editor.wordHighlightTextBackground"
+            }
+          },
+          "description": "Highlight color settings. Supports plain colors like #RRGGBB or theme tokens with prefix theme: (for example theme:editor.wordHighlightBackground).",
+          "properties": {
+            "strong": {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "default": "theme:editorWarning.foreground"
+                },
+                "backgroundColor": {
+                  "type": "string",
+                  "default": "theme:editor.wordHighlightBackground"
+                },
+                "borderColor": {
+                  "type": "string",
+                  "default": "theme:editor.wordHighlightStrongBorder"
+                },
+                "overviewRulerColor": {
+                  "type": "string",
+                  "default": "theme:editor.findMatchHighlightBackground"
+                }
+              }
+            },
+            "weak": {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "default": "theme:editor.foreground"
+                },
+                "backgroundColor": {
+                  "type": "string",
+                  "default": "theme:editor.wordHighlightTextBackground"
+                },
+                "borderColor": {
+                  "type": "string",
+                  "default": "theme:editor.wordHighlightBorder"
+                },
+                "overviewRulerColor": {
+                  "type": "string",
+                  "default": "theme:editor.wordHighlightTextBackground"
+                }
+              }
             }
           }
         }
