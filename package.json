@@ -3,6 +3,24 @@
   "displayName": "WriterRefactorTool",
   "description": "Refactor-like name registration and rename for novel writing",
   "version": "0.0.1",
+  "publisher": "magic-gcy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/WriterRefactorTool.git"
+  },
+  "homepage": "https://github.com/your-username/WriterRefactorTool#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/WriterRefactorTool/issues"
+  },
+  "keywords": [
+    "vscode",
+    "extension",
+    "writing",
+    "refactor",
+    "alias",
+    "character"
+  ],
   "engines": {
     "vscode": "^1.106.0"
   },
@@ -190,7 +208,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
+    "@types/vscode": "^1.106.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "typescript-eslint": "^8.54.0",
