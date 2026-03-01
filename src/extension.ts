@@ -1,4 +1,4 @@
-import * as path from 'path';
+﻿import * as path from 'path';
 import * as vscode from 'vscode';
 
 type MatchMode = 'wholeWord' | 'substring';
@@ -9,9 +9,16 @@ interface RefactorEntry {
 	createdAt: string;
 }
 
+interface CharacterEntry {
+	id: string;
+	name: string;
+	createdAt: string;
+	aliases: RefactorEntry[];
+}
+
 interface RegistryFile {
 	version: number;
-	entries: RefactorEntry[];
+	characters: CharacterEntry[];
 }
 
 interface ExcludeRules {
@@ -21,13 +28,13 @@ interface ExcludeRules {
 }
 
 const DEFAULT_REGISTRY_PATH = '.writer-refactor/registry.json';
-let highlightDecoration: vscode.TextEditorDecorationType | undefined;
-let isProductionMode = false;
+let highlightDecorationStrong: vscode.TextEditorDecorationType | undefined;
+let highlightDecorationWeak: vscode.TextEditorDecorationType | undefined;
+let idSequence = 0;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	isProductionMode = context.extensionMode === vscode.ExtensionMode.Production;
-	await setCommandContexts(false, false, false);
-	highlightDecoration = vscode.window.createTextEditorDecorationType({
+	await setCommandContexts(false, false, false, false);
+	highlightDecorationStrong = vscode.window.createTextEditorDecorationType({
 		color: new vscode.ThemeColor('editorWarning.foreground'),
 		backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
 		borderRadius: '4px',
@@ -37,7 +44,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		overviewRulerColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
 		overviewRulerLane: vscode.OverviewRulerLane.Center,
 	});
-	context.subscriptions.push(highlightDecoration);
+	highlightDecorationWeak = vscode.window.createTextEditorDecorationType({
+		color: new vscode.ThemeColor('editor.foreground'),
+		backgroundColor: new vscode.ThemeColor('editor.wordHighlightTextBackground'),
+		borderRadius: '4px',
+		borderWidth: '1px',
+		borderStyle: 'solid',
+		borderColor: new vscode.ThemeColor('editor.wordHighlightBorder'),
+		overviewRulerColor: new vscode.ThemeColor('editor.wordHighlightTextBackground'),
+		overviewRulerLane: vscode.OverviewRulerLane.Center,
+	});
+	context.subscriptions.push(highlightDecorationStrong, highlightDecorationWeak);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('writerRefactor.registerSelectedText', async () => {
@@ -59,18 +76,86 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 
 			const registry = await loadRegistry(workspaceFolder);
-			if (registry.entries.some((entry) => entry.text === selectedText)) {
+			if (isAliasRegistered(registry.characters, selectedText)) {
 				vscode.window.showInformationMessage(`"${selectedText}" is already registered.`);
 				return;
 			}
 
-			registry.entries.push({
-				id: createEntryId(selectedText),
-				text: selectedText,
-				createdAt: new Date().toISOString(),
+			const now = new Date().toISOString();
+			registry.characters.push({
+				id: createId('character'),
+				name: selectedText,
+				createdAt: now,
+				aliases: [
+					{
+						id: createId('alias'),
+						text: selectedText,
+						createdAt: now,
+					},
+				],
 			});
 			await saveRegistry(workspaceFolder, registry);
-			vscode.window.showInformationMessage(`Registered "${selectedText}" as refactor object.`);
+			vscode.window.showInformationMessage(`Registered "${selectedText}" as a new character alias.`);
+			await updateEditorHighlight(editor, workspaceFolder);
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('writerRefactor.registerSelectedTextAsAlias', async () => {
+			const workspaceFolder = getWorkspaceFolder();
+			if (!workspaceFolder) {
+				vscode.window.showWarningMessage('Writer Refactor requires an open workspace folder.');
+				return;
+			}
+
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) {
+				return;
+			}
+
+			const selectedText = editor.document.getText(editor.selection).trim();
+			if (!selectedText) {
+				vscode.window.showInformationMessage('Please select text before registering as alias.');
+				return;
+			}
+
+			const registry = await loadRegistry(workspaceFolder);
+			if (registry.characters.length === 0) {
+				vscode.window.showInformationMessage('No character exists. Register a new character first.');
+				return;
+			}
+			if (isAliasRegistered(registry.characters, selectedText)) {
+				vscode.window.showInformationMessage(`"${selectedText}" is already registered.`);
+				return;
+			}
+
+			const picked = await vscode.window.showQuickPick(
+				registry.characters.map((character) => ({
+					label: character.name,
+					description: `${character.aliases.length} aliases`,
+					characterId: character.id,
+				})),
+				{ placeHolder: 'Select a character category for this alias' },
+			);
+			if (!picked) {
+				return;
+			}
+
+			const now = new Date().toISOString();
+			registry.characters = registry.characters.map((character) => (
+				character.id === picked.characterId
+					? {
+						...character,
+						aliases: [
+							...character.aliases,
+							{ id: createId('alias'), text: selectedText, createdAt: now },
+						],
+					}
+					: character
+			));
+
+			await saveRegistry(workspaceFolder, registry);
+			vscode.window.showInformationMessage(`Registered "${selectedText}" as alias under "${picked.label}".`);
 			await updateEditorHighlight(editor, workspaceFolder);
 		}),
 	);
@@ -95,7 +180,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 
 			const registry = await loadRegistry(workspaceFolder);
-			const exists = registry.entries.some((entry) => entry.text === selectedText);
+			const exists = isAliasRegistered(registry.characters, selectedText);
 			if (!exists) {
 				vscode.window.showInformationMessage(`"${selectedText}" is not registered.`);
 				return;
@@ -110,7 +195,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				return;
 			}
 
-			registry.entries = registry.entries.filter((entry) => entry.text !== selectedText);
+			registry.characters = registry.characters
+				.map((character) => ({
+					...character,
+					aliases: character.aliases.filter((alias) => alias.text !== selectedText),
+				}))
+				.filter((character) => character.aliases.length > 0);
+
 			await saveRegistry(workspaceFolder, registry);
 			vscode.window.showInformationMessage(`Unregistered "${selectedText}".`);
 			await updateEditorHighlight(editor, workspaceFolder);
@@ -136,7 +227,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 						throw new Error('Writer Refactor requires an open workspace folder.');
 					}
 					const registry = await loadRegistry(folder);
-					const target = findRegisteredTargetAtPosition(document, position, registry.entries.map((entry) => entry.text));
+					const target = findRegisteredTargetAtPosition(document, position, getRegisteredAliasTexts(registry.characters));
 					if (!target) {
 						throw new Error('Cursor must be on a registered refactor object.');
 					}
@@ -153,9 +244,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 						throw new Error('Writer Refactor requires an open workspace folder.');
 					}
 					const registry = await loadRegistry(folder);
-					const target = findRegisteredTargetAtPosition(document, position, registry.entries.map((entry) => entry.text));
+					const target = findRegisteredTargetAtPosition(document, position, getRegisteredAliasTexts(registry.characters));
 					if (!target) {
 						throw new Error('Current token is not a registered refactor object.');
+					}
+					if (nextText !== target.text && isAliasRegistered(registry.characters, nextText)) {
+						throw new Error(`"${nextText}" is already registered.`);
 					}
 
 					const uris = await findWorkspaceTextUris();
@@ -171,12 +265,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 						}
 					}
 
-					registry.entries = registry.entries.map((entry) => (
-						entry.text === target.text
-							? { ...entry, text: nextText }
-							: entry
-					));
-					registry.entries = dedupeEntries(registry.entries);
+					registry.characters = registry.characters.map((character) => ({
+						...character,
+						aliases: character.aliases.map((alias) => (
+							alias.text === target.text
+								? { ...alias, text: nextText }
+								: alias
+						)),
+					}));
 					await saveRegistry(folder, registry);
 
 					const activeEditor = vscode.window.activeTextEditor;
@@ -208,7 +304,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.onDidChangeTextEditorSelection(async (event) => {
 			const workspaceFolder = getWorkspaceFolder();
 			if (!workspaceFolder) {
-				await setCommandContexts(false, false, false);
+				await setCommandContexts(false, false, false, false);
 				return;
 			}
 			await updateEditorHighlight(event.textEditor, workspaceFolder);
@@ -218,12 +314,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveTextEditor(async (editor) => {
 			if (!editor) {
-				await setCommandContexts(false, false, false);
+				await setCommandContexts(false, false, false, false);
 				return;
 			}
 			const workspaceFolder = getWorkspaceFolder();
 			if (!workspaceFolder) {
-				await setCommandContexts(false, false, false);
+				await setCommandContexts(false, false, false, false);
 				return;
 			}
 			await updateEditorHighlight(editor, workspaceFolder);
@@ -246,7 +342,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export function deactivate(): void {
-	highlightDecoration?.dispose();
+	highlightDecorationStrong?.dispose();
+	highlightDecorationWeak?.dispose();
 }
 
 function getWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
@@ -265,7 +362,7 @@ async function ensureRegistryExists(folder: vscode.WorkspaceFolder): Promise<voi
 		await vscode.workspace.fs.stat(uri);
 	} catch {
 		await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
-		const initial: RegistryFile = { version: 1, entries: [] };
+		const initial: RegistryFile = { version: 1, characters: [] };
 		await vscode.workspace.fs.writeFile(uri, Buffer.from(`${JSON.stringify(initial, null, 2)}\n`, 'utf8'));
 	}
 }
@@ -276,19 +373,14 @@ async function loadRegistry(folder: vscode.WorkspaceFolder): Promise<RegistryFil
 	try {
 		const bytes = await vscode.workspace.fs.readFile(uri);
 		const parsed = JSON.parse(Buffer.from(bytes).toString('utf8')) as Partial<RegistryFile>;
-		const entries = Array.isArray(parsed.entries)
-			? parsed.entries
-				.filter((entry): entry is RefactorEntry => Boolean(entry?.id) && typeof entry.text === 'string' && typeof entry.createdAt === 'string')
-				.map((entry) => ({ ...entry, text: entry.text.trim() }))
-				.filter((entry) => entry.text.length > 0)
-			: [];
+		const characters = normalizeCharacters(parsed.characters);
 		return {
-			version: typeof parsed.version === 'number' ? parsed.version : 1,
-			entries: dedupeEntries(entries),
+			version: 1,
+			characters,
 		};
 	} catch (error) {
 		vscode.window.showWarningMessage(`Registry parse failed, recreating file. (${String(error)})`);
-		const fallback: RegistryFile = { version: 1, entries: [] };
+		const fallback: RegistryFile = { version: 1, characters: [] };
 		await saveRegistry(folder, fallback);
 		return fallback;
 	}
@@ -299,34 +391,98 @@ async function saveRegistry(folder: vscode.WorkspaceFolder, registry: RegistryFi
 	await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
 	const normalized: RegistryFile = {
 		version: 1,
-		entries: dedupeEntries(registry.entries),
+		characters: normalizeCharacters(registry.characters),
 	};
 	await vscode.workspace.fs.writeFile(uri, Buffer.from(`${JSON.stringify(normalized, null, 2)}\n`, 'utf8'));
 }
 
-function dedupeEntries(entries: RefactorEntry[]): RefactorEntry[] {
-	const seen = new Set<string>();
-	const result: RefactorEntry[] = [];
-	for (const entry of entries) {
-		if (seen.has(entry.text)) {
+function normalizeCharacters(raw: unknown): CharacterEntry[] {
+	if (!Array.isArray(raw)) {
+		return [];
+	}
+	const textSeen = new Set<string>();
+	const result: CharacterEntry[] = [];
+	for (const item of raw) {
+		const character = normalizeCharacter(item);
+		if (!character) {
 			continue;
 		}
-		seen.add(entry.text);
-		result.push(entry);
+		const aliases: RefactorEntry[] = [];
+		for (const alias of character.aliases) {
+			const key = alias.text.trim();
+			if (textSeen.has(key)) {
+				continue;
+			}
+			textSeen.add(key);
+			aliases.push(alias);
+		}
+		if (aliases.length === 0) {
+			continue;
+		}
+		result.push({ ...character, aliases });
 	}
 	return result;
 }
 
-function createEntryId(text: string): string {
-	if (isProductionMode) {
-		const timestampPart = Date.now().toString(36);
-		const randomPart = Math.random().toString(36).slice(2, 10);
-		return `${timestampPart}-${randomPart}`;
+function normalizeCharacter(raw: unknown): CharacterEntry | undefined {
+	if (!raw || typeof raw !== 'object') {
+		return undefined;
 	}
+	const candidate = raw as Partial<CharacterEntry>;
+	if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string' || typeof candidate.createdAt !== 'string') {
+		return undefined;
+	}
+	const aliases = Array.isArray(candidate.aliases)
+		? candidate.aliases
+			.map((alias) => normalizeAlias(alias))
+			.filter((alias): alias is RefactorEntry => Boolean(alias))
+		: [];
+	if (aliases.length === 0) {
+		return undefined;
+	}
+	const name = candidate.name.trim();
+	return {
+		id: candidate.id,
+		name: name.length > 0 ? name : aliases[0].text,
+		createdAt: candidate.createdAt,
+		aliases,
+	};
+}
 
-	const normalized = text.toLowerCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_-]/gu, '');
-	const prefix = normalized.length > 0 ? normalized : 'entry';
-	return `${prefix}-${Date.now().toString(36)}`;
+function normalizeAlias(raw: unknown): RefactorEntry | undefined {
+	if (!raw || typeof raw !== 'object') {
+		return undefined;
+	}
+	const candidate = raw as Partial<RefactorEntry>;
+	if (typeof candidate.id !== 'string' || typeof candidate.text !== 'string' || typeof candidate.createdAt !== 'string') {
+		return undefined;
+	}
+	const text = candidate.text.trim();
+	if (text.length === 0) {
+		return undefined;
+	}
+	return {
+		id: candidate.id,
+		text,
+		createdAt: candidate.createdAt,
+	};
+}
+
+function isAliasRegistered(characters: CharacterEntry[], text: string): boolean {
+	const target = text.trim();
+	return characters.some((character) => character.aliases.some((alias) => alias.text === target));
+}
+
+function getRegisteredAliasTexts(characters: CharacterEntry[]): string[] {
+	return characters.flatMap((character) => character.aliases.map((alias) => alias.text));
+}
+
+function createId(kind: 'character' | 'alias'): string {
+	idSequence += 1;
+	const timestamp = Date.now().toString(36);
+	const sequence = idSequence.toString(36);
+	const random = Math.random().toString(36).slice(2, 8);
+	return `${kind}-${timestamp}-${sequence}-${random}`;
 }
 
 function getMatchMode(): MatchMode {
@@ -460,44 +616,65 @@ async function findWorkspaceTextUris(): Promise<vscode.Uri[]> {
 }
 
 async function updateEditorHighlight(editor: vscode.TextEditor, folder: vscode.WorkspaceFolder): Promise<void> {
-	if (!highlightDecoration) {
+	if (!highlightDecorationStrong || !highlightDecorationWeak) {
 		return;
 	}
 	if (!isSupportedDocument(editor.document)) {
-		editor.setDecorations(highlightDecoration, []);
-		await setCommandContexts(false, false, false);
+		editor.setDecorations(highlightDecorationStrong, []);
+		editor.setDecorations(highlightDecorationWeak, []);
+		await setCommandContexts(false, false, false, false);
 		return;
 	}
+
 	const registry = await loadRegistry(folder);
-	const registeredTexts = registry.entries.map((entry) => entry.text);
+	const registeredTexts = getRegisteredAliasTexts(registry.characters);
 
 	const selectedText = editor.document.getText(editor.selection).trim();
 	const hasSelection = selectedText.length > 0;
 	const selectedIsRegistered = hasSelection && registeredTexts.includes(selectedText);
+	const canRegisterAlias = hasSelection && !selectedIsRegistered && registry.characters.length > 0;
 	let highlightText = selectedText;
 	if (!highlightText) {
-		const targetAtCursor = findRegisteredTargetAtPosition(
-			editor.document,
-			editor.selection.active,
-			registeredTexts,
-		);
+		const targetAtCursor = findRegisteredTargetAtPosition(editor.document, editor.selection.active, registeredTexts);
 		highlightText = targetAtCursor?.text ?? '';
 	}
 
-
-	// todo : 这里register和unregister的显隐其实还需要盘一下
 	if (!highlightText || !registeredTexts.includes(highlightText)) {
-		editor.setDecorations(highlightDecoration, []);
-		await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, false);
+		editor.setDecorations(highlightDecorationStrong, []);
+		editor.setDecorations(highlightDecorationWeak, []);
+		await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, false, canRegisterAlias);
 		return;
 	}
-	const ranges = findMatchRanges(editor.document, highlightText);
-	editor.setDecorations(highlightDecoration, ranges);
-	await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, true);
+
+	const character = findCharacterByAlias(registry.characters, highlightText);
+	if (!character) {
+		editor.setDecorations(highlightDecorationStrong, []);
+		editor.setDecorations(highlightDecorationWeak, []);
+		await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, false, canRegisterAlias);
+		return;
+	}
+
+	const weakRanges = character.aliases
+		.filter((alias) => alias.text !== highlightText)
+		.flatMap((alias) => findMatchRanges(editor.document, alias.text));
+	const strongRanges = findMatchRanges(editor.document, highlightText);
+	editor.setDecorations(highlightDecorationWeak, weakRanges);
+	editor.setDecorations(highlightDecorationStrong, strongRanges);
+	await setCommandContexts(hasSelection && !selectedIsRegistered, selectedIsRegistered, true, canRegisterAlias);
 }
 
-async function setCommandContexts(canRegister: boolean, canUnregister: boolean, canRename: boolean): Promise<void> {
+function findCharacterByAlias(characters: CharacterEntry[], aliasText: string): CharacterEntry | undefined {
+	return characters.find((character) => character.aliases.some((alias) => alias.text === aliasText));
+}
+
+async function setCommandContexts(
+	canRegister: boolean,
+	canUnregister: boolean,
+	canRename: boolean,
+	canRegisterAlias: boolean,
+): Promise<void> {
 	await vscode.commands.executeCommand('setContext', 'writerRefactor.canRegister', canRegister);
 	await vscode.commands.executeCommand('setContext', 'writerRefactor.canUnregister', canUnregister);
 	await vscode.commands.executeCommand('setContext', 'writerRefactor.canRename', canRename);
+	await vscode.commands.executeCommand('setContext', 'writerRefactor.canRegisterAlias', canRegisterAlias);
 }

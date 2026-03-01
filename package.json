@@ -13,6 +13,7 @@
     "onLanguage:plaintext",
     "onLanguage:markdown",
     "onCommand:writerRefactor.registerSelectedText",
+    "onCommand:writerRefactor.registerSelectedTextAsAlias",
     "onCommand:writerRefactor.unregisterSelectedText",
     "onCommand:writerRefactor.renameSelectedEntry",
     "onCommand:writerRefactor.openRegistry"
@@ -22,19 +23,23 @@
     "commands": [
       {
         "command": "writerRefactor.registerSelectedText",
-        "title": "Writer Refactor: Register Selected Text"
+        "title": "Writer Refactor: 注册选中文本"
       },
       {
         "command": "writerRefactor.unregisterSelectedText",
-        "title": "Writer Refactor: Unregister Selected Text"
+        "title": "Writer Refactor: 取消注册选中文本"
+      },
+      {
+        "command": "writerRefactor.registerSelectedTextAsAlias",
+        "title": "Writer Refactor: 将选中文本注册为别名"
       },
       {
         "command": "writerRefactor.renameSelectedEntry",
-        "title": "Writer Refactor: Rename Current Refactor Object"
+        "title": "Writer Refactor: 重命名当前对象"
       },
       {
         "command": "writerRefactor.openRegistry",
-        "title": "Writer Refactor: Open Registry JSON"
+        "title": "Writer Refactor: 打开注册表 JSON"
       }
     ],
     "menus": {
@@ -46,6 +51,10 @@
         {
           "command": "writerRefactor.unregisterSelectedText",
           "when": "editorTextFocus && writerRefactor.canUnregister"
+        },
+        {
+          "command": "writerRefactor.registerSelectedTextAsAlias",
+          "when": "editorTextFocus && writerRefactor.canRegisterAlias"
         },
         {
           "command": "writerRefactor.renameSelectedEntry",

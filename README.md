@@ -1,71 +1,88 @@
-# WriterRefactorTool README
+# WriterRefactorTool
 
-This is the README for your extension "WriterRefactorTool". After writing up a brief description, we recommend including the following sections.
+`WriterRefactorTool` 是一个面向中文写作的 VS Code 插件。  
+它把“角色别名改名”做成类似代码重构的体验：命中一个已注册别名后，可在工作区内统一替换该别名。
 
-## Features
+## 主要功能
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- 角色分组 + 别名管理（两层结构）
+- 右键注册新角色（首个别名）
+- 右键把选中文本注册为已有角色的别名
+- 对已注册别名执行重命名（跨工作区 `.txt` / `.md`）
+- 高亮增强：
+  - 亮色：当前命中的别名
+  - 暗色：同角色下的其他别名
+- 可配置匹配模式与排除规则（Markdown 代码块/行内代码/自定义正则）
 
-For example if there is an image subfolder under your extension project workspace:
+## 使用方式
 
-\!\[feature X\]\(images/feature-x.png\)
+1. 在 `txt` 或 `md` 文件中选中一个名字。
+2. 右键执行 `Writer Refactor: 注册选中文本`（会新建一个角色分类）。
+3. 如果要添加同角色别名，选中新文本后右键执行 `Writer Refactor: 将选中文本注册为别名`，再选择角色。
+4. 将光标放在某个已注册别名上，执行 `Writer Refactor: 重命名当前对象`。
+5. 输入新名字后确认，插件会在工作区文本文件中替换该别名。
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## 命令列表
 
-## Requirements
+- `Writer Refactor: 注册选中文本`
+- `Writer Refactor: 将选中文本注册为别名`
+- `Writer Refactor: 取消注册选中文本`
+- `Writer Refactor: 重命名当前对象`
+- `Writer Refactor: 打开注册表 JSON`
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## 配置项
 
-## Extension Settings
+- `writerRefactor.matchMode`
+  - `substring`（默认）或 `wholeWord`
+- `writerRefactor.registryPath`
+  - 注册表路径，默认：`.writer-refactor/registry.json`
+- `writerRefactor.excludeRules`
+  - `excludeFencedCode`：排除 Markdown 围栏代码块
+  - `excludeInlineCode`：排除 Markdown 行内代码
+  - `customRegex`：自定义排除正则
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## 注册表结构
 
-For example:
+插件使用 `version: 1` 结构：
 
-This extension contributes the following settings:
+```json
+{
+  "version": 1,
+  "characters": [
+    {
+      "id": "character-...",
+      "name": "张三",
+      "createdAt": "2026-03-01T12:34:56.000Z",
+      "aliases": [
+        {
+          "id": "alias-...",
+          "text": "张三",
+          "createdAt": "2026-03-01T12:34:56.000Z"
+        },
+        {
+          "id": "alias-...",
+          "text": "小张",
+          "createdAt": "2026-03-01T12:35:10.000Z"
+        }
+      ]
+    }
+  ]
+}
+```
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+说明：
+- 角色名 `name` 仅用于分类展示，不参与重命名替换逻辑。
+- 重命名只作用于当前命中的别名文本。
 
-## Known Issues
+## 开发
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+```bash
+npm install
+npm run watch
+```
 
-## Release Notes
+按 `F5` 启动 Extension Development Host。
 
-Users appreciate release notes as you update your extension.
+## License
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+MIT
