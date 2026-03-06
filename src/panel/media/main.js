@@ -322,7 +322,7 @@
 
 		const text = document.createElement('span');
 		text.className = value ? 'meta-value' : 'meta-value empty';
-		text.textContent = value || '空';
+		text.textContent = value || '';
 		row.appendChild(text);
 		return row;
 	}

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { getRegisteredAliasTexts, isAliasRegistered } from './character';
 import { registerCommands } from './commands';
 import { disposeHighlightDecorations, refreshHighlightDecorations, setCommandContexts, updateEditorHighlight } from './highlight';
+import { registerCharacterHoverProvider } from './hover';
 import { findRegisteredTargetAtPosition, findMatchRanges, findWorkspaceTextUris, isSupportedDocument } from './matcher';
 import { loadRegistry, saveRegistry, setRegistryStorageRoot } from './registry';
 
@@ -17,6 +18,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	refreshHighlightDecorations();
 
 	registerCommands(context);
+	registerCharacterHoverProvider(context);
 
 	context.subscriptions.push(
 		vscode.languages.registerRenameProvider(
