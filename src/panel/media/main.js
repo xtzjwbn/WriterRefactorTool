@@ -96,7 +96,7 @@
 				vscode.postMessage({
 					type: 'panel.alias.rename',
 					characterId: editing.characterId,
-					aliasId: editing.aliasId,
+					aliasText: editing.aliasText,
 					text,
 				});
 				break;
@@ -176,7 +176,7 @@
 		character.aliases.forEach((alias) => {
 			const row = document.createElement('li');
 			row.className = 'alias-row';
-			if (editing && editing.type === 'rename-alias' && editing.aliasId === alias.id) {
+			if (editing && editing.type === 'rename-alias' && editing.aliasText === alias.text) {
 				row.appendChild(renderInlineEditor('输入别名并回车保存', alias.text, submitEdit, cancelEdit));
 			} else {
 				const text = document.createElement('span');
@@ -188,10 +188,10 @@
 				actions.className = 'actions';
 				actions.appendChild(createActionButton('编辑', () => beginEdit('rename-alias', {
 					characterId: character.id,
-					aliasId: alias.id,
+					aliasText: alias.text,
 				})));
 				actions.appendChild(createActionButton('删除', () => {
-					vscode.postMessage({ type: 'panel.alias.delete', characterId: character.id, aliasId: alias.id });
+					vscode.postMessage({ type: 'panel.alias.delete', characterId: character.id, aliasText: alias.text });
 				}));
 				row.appendChild(actions);
 			}

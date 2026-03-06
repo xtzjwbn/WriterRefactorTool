@@ -69,16 +69,12 @@ export async function registerSelectedRole(): Promise<void> {
 		return;
 	}
 
-	const now = new Date().toISOString();
 	registry.characters.push({
 		id: createId('character'),
 		name: selectedText,
-		createdAt: now,
 		aliases: [
 			{
-				id: createId('alias'),
 				text: selectedText,
-				createdAt: now,
 			},
 		],
 	});
@@ -131,14 +127,13 @@ export async function registerSelectedAlias(): Promise<void> {
 		return;
 	}
 
-	const now = new Date().toISOString();
 	registry.characters = registry.characters.map((character) => (
 		character.id === picked.characterId
 			? {
 				...character,
 				aliases: [
 					...character.aliases,
-					{ id: createId('alias'), text: selectedText, createdAt: now },
+					{ text: selectedText },
 				],
 			}
 			: character

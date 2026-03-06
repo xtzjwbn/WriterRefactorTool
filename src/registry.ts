@@ -143,7 +143,7 @@ export function normalizeCharacter(raw: unknown): CharacterEntry | undefined {
 		return undefined;
 	}
 	const candidate = raw as Partial<CharacterEntry>;
-	if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string' || typeof candidate.createdAt !== 'string') {
+	if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string') {
 		return undefined;
 	}
 	const aliases = Array.isArray(candidate.aliases)
@@ -158,7 +158,6 @@ export function normalizeCharacter(raw: unknown): CharacterEntry | undefined {
 	return {
 		id: candidate.id,
 		name: name.length > 0 ? name : aliases[0].text,
-		createdAt: candidate.createdAt,
 		aliases,
 	};
 }
@@ -173,7 +172,7 @@ export function normalizeAlias(raw: unknown): RefactorEntry | undefined {
 		return undefined;
 	}
 	const candidate = raw as Partial<RefactorEntry>;
-	if (typeof candidate.id !== 'string' || typeof candidate.text !== 'string' || typeof candidate.createdAt !== 'string') {
+	if (typeof candidate.text !== 'string') {
 		return undefined;
 	}
 	const text = candidate.text.trim();
@@ -181,18 +180,16 @@ export function normalizeAlias(raw: unknown): RefactorEntry | undefined {
 		return undefined;
 	}
 	return {
-		id: candidate.id,
 		text,
-		createdAt: candidate.createdAt,
 	};
 }
 
 /**
- * 生成角色或别名 ID，格式与旧实现保持一致。
- * @param kind ID 类型，character 或 alias。
+ * 生成角色 ID，格式与旧实现保持一致。
+ * @param kind ID 类型。
  * @returns 生成后的唯一 ID 字符串。
  */
-export function createId(kind: 'character' | 'alias'): string {
+export function createId(kind: 'character'): string {
 	idSequence += 1;
 	const timestamp = Date.now().toString(36);
 	const sequence = idSequence.toString(36);

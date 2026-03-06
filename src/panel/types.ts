@@ -1,5 +1,4 @@
 export interface PanelAlias {
-	id: string;
 	text: string;
 }
 
@@ -12,7 +11,6 @@ export interface PanelCharacter {
 export interface PanelSnapshot {
 	workspaceName: string;
 	characters: PanelCharacter[];
-	updatedAt: string;
 }
 
 export interface PanelError {
@@ -27,8 +25,8 @@ export type PanelToExtMessage =
 	| { type: 'panel.character.rename'; characterId: string; name: string }
 	| { type: 'panel.character.delete'; characterId: string; confirm: boolean }
 	| { type: 'panel.alias.add'; characterId: string; text: string }
-	| { type: 'panel.alias.rename'; characterId: string; aliasId: string; text: string }
-	| { type: 'panel.alias.delete'; characterId: string; aliasId: string };
+	| { type: 'panel.alias.rename'; characterId: string; aliasText: string; text: string }
+	| { type: 'panel.alias.delete'; characterId: string; aliasText: string };
 
 export type ExtToPanelMessage =
 	| { type: 'ext.snapshot'; snapshot: PanelSnapshot }

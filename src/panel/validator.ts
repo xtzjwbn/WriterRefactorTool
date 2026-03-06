@@ -50,17 +50,17 @@ export function validateAliasText(text: string): string {
  * 确保别名在全局范围唯一。
  * @param characters 注册表中的角色列表。
  * @param nextAliasText 待校验别名文本。
- * @param ignoreAliasId 校验时忽略的别名 ID（用于重命名自身）。
+ * @param ignoreAliasText 校验时忽略的旧别名文本（用于重命名自身）。
  * @returns 无返回值。
  */
 export function assertAliasUnique(
 	characters: CharacterEntry[],
 	nextAliasText: string,
-	ignoreAliasId?: string,
+	ignoreAliasText?: string,
 ): void {
 	for (const character of characters) {
 		for (const alias of character.aliases) {
-			if (ignoreAliasId && alias.id === ignoreAliasId) {
+			if (ignoreAliasText && alias.text === ignoreAliasText) {
 				continue;
 			}
 			if (alias.text === nextAliasText) {

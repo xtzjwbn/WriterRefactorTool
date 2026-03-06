@@ -87,13 +87,13 @@ async function handlePanelMessage(message: PanelToExtMessage): Promise<void> {
 				return;
 			}
 			case 'panel.alias.rename': {
-				const snapshot = await updateAliasText(workspaceFolder, message.characterId, message.aliasId, message.text);
+				const snapshot = await updateAliasText(workspaceFolder, message.characterId, message.aliasText, message.text);
 				postMessage({ type: 'ext.snapshot', snapshot });
 				postMessage({ type: 'ext.toast', message: '别名已更新。' });
 				return;
 			}
 			case 'panel.alias.delete': {
-				const snapshot = await removeAlias(workspaceFolder, message.characterId, message.aliasId);
+				const snapshot = await removeAlias(workspaceFolder, message.characterId, message.aliasText);
 				postMessage({ type: 'ext.snapshot', snapshot });
 				postMessage({ type: 'ext.toast', message: '别名已删除。' });
 				return;

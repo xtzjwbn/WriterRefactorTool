@@ -94,17 +94,12 @@
     {
       "id": "character-...",
       "name": "张三",
-      "createdAt": "2026-03-01T12:34:56.000Z",
       "aliases": [
         {
-          "id": "alias-...",
-          "text": "张三",
-          "createdAt": "2026-03-01T12:34:56.000Z"
+          "text": "张三"
         },
         {
-          "id": "alias-...",
-          "text": "小张",
-          "createdAt": "2026-03-01T12:35:10.000Z"
+          "text": "小张"
         }
       ]
     }

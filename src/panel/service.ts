@@ -38,16 +38,12 @@ export async function addCharacter(folder: vscode.WorkspaceFolder, name: string)
 	const registry = await loadRegistry(folder);
 	assertAliasUnique(registry.characters, normalizedName);
 
-	const now = new Date().toISOString();
 	registry.characters.push({
 		id: createId('character'),
 		name: normalizedName,
-		createdAt: now,
 		aliases: [
 			{
-				id: createId('alias'),
 				text: normalizedName,
-				createdAt: now,
 			},
 		],
 	});
@@ -126,9 +122,7 @@ export async function addAlias(
 	}
 
 	character.aliases.push({
-		id: createId('alias'),
 		text: normalizedText,
-		createdAt: new Date().toISOString(),
 	});
 
 	await saveRegistry(folder, registry);
@@ -139,26 +133,26 @@ export async function addAlias(
  * 修改目标别名文本。
  * @param folder 当前工作区目录对象。
  * @param characterId 角色 ID。
- * @param aliasId 别名 ID。
+ * @param aliasText 旧别名文本。
  * @param text 新别名文本。
  * @returns 更新后的面板快照。
  */
 export async function updateAliasText(
 	folder: vscode.WorkspaceFolder,
 	characterId: string,
-	aliasId: string,
+	aliasText: string,
 	text: string,
 ): Promise<PanelSnapshot> {
 	const normalizedText = validateAliasText(text);
 	const registry = await loadRegistry(folder);
-	assertAliasUnique(registry.characters, normalizedText, aliasId);
+	assertAliasUnique(registry.characters, normalizedText, aliasText);
 
 	const character = registry.characters.find((item) => item.id === characterId);
 	if (!character) {
 		throw new PanelServiceError('character_not_found', '未找到目标角色。');
 	}
 
-	const alias = character.aliases.find((item) => item.id === aliasId);
+	const alias = character.aliases.find((item) => item.text === aliasText);
 	if (!alias) {
 		throw new PanelServiceError('alias_not_found', '未找到目标别名。');
 	}
@@ -172,13 +166,13 @@ export async function updateAliasText(
  * 删除目标别名；若角色下无别名则自动移除该角色。
  * @param folder 当前工作区目录对象。
  * @param characterId 角色 ID。
- * @param aliasId 别名 ID。
+ * @param aliasText 别名文本。
  * @returns 更新后的面板快照。
  */
 export async function removeAlias(
 	folder: vscode.WorkspaceFolder,
 	characterId: string,
-	aliasId: string,
+	aliasText: string,
 ): Promise<PanelSnapshot> {
 	const registry = await loadRegistry(folder);
 	const character = registry.characters.find((item) => item.id === characterId);
@@ -186,7 +180,7 @@ export async function removeAlias(
 		throw new PanelServiceError('character_not_found', '未找到目标角色。');
 	}
 
-	const nextAliases = character.aliases.filter((item) => item.id !== aliasId);
+	const nextAliases = character.aliases.filter((item) => item.text !== aliasText);
 	if (nextAliases.length === character.aliases.length) {
 		throw new PanelServiceError('alias_not_found', '未找到目标别名。');
 	}
@@ -220,7 +214,6 @@ function toPanelSnapshot(workspaceName: string, registry: RegistryFile): PanelSn
 	return {
 		workspaceName,
 		characters: registry.characters.map((character) => toPanelCharacter(character)),
-		updatedAt: new Date().toISOString(),
 	};
 }
 
@@ -232,9 +225,8 @@ function toPanelCharacter(character: CharacterEntry): PanelCharacter {
 	};
 }
 
-function toPanelAlias(alias: RefactorEntry): { id: string; text: string } {
+function toPanelAlias(alias: RefactorEntry): { text: string } {
 	return {
-		id: alias.id,
 		text: alias.text,
 	};
 }

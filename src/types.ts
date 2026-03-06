@@ -1,15 +1,12 @@
 export type MatchMode = 'wholeWord' | 'substring';
 
 export interface RefactorEntry {
-	id: string;
 	text: string;
-	createdAt: string;
 }
 
 export interface CharacterEntry {
 	id: string;
 	name: string;
-	createdAt: string;
 	aliases: RefactorEntry[];
 }
 
