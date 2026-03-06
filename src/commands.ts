@@ -72,6 +72,8 @@ export async function registerSelectedRole(): Promise<void> {
 	registry.characters.push({
 		id: createId('character'),
 		name: selectedText,
+		type: '',
+		description: '',
 		aliases: [
 			{
 				text: selectedText,

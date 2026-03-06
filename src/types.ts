@@ -7,6 +7,8 @@ export interface RefactorEntry {
 export interface CharacterEntry {
 	id: string;
 	name: string;
+	type: string;
+	description: string;
 	aliases: RefactorEntry[];
 }
 

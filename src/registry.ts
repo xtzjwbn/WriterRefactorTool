@@ -155,9 +155,13 @@ export function normalizeCharacter(raw: unknown): CharacterEntry | undefined {
 		return undefined;
 	}
 	const name = candidate.name.trim();
+	const characterType = typeof candidate.type === 'string' ? candidate.type.trim() : '';
+	const description = typeof candidate.description === 'string' ? candidate.description.trim() : '';
 	return {
 		id: candidate.id,
 		name: name.length > 0 ? name : aliases[0].text,
+		type: characterType,
+		description,
 		aliases,
 	};
 }

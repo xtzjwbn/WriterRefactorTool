@@ -90,6 +90,91 @@ button:hover {
 	font-weight: 600;
 }
 
+.character-meta {
+	margin-bottom: 8px;
+	padding: 6px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--vscode-editor-background) 88%, var(--vscode-sideBar-background));
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.meta-row {
+	display: flex;
+	gap: 6px;
+	align-items: flex-start;
+}
+
+.meta-label {
+	opacity: 0.85;
+	white-space: nowrap;
+}
+
+.meta-value {
+	word-break: break-word;
+}
+
+.meta-value.empty {
+	opacity: 0.7;
+	font-style: italic;
+}
+
+.meta-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.meta-editor input,
+.meta-editor textarea {
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-input-border);
+	border-radius: 6px;
+	padding: 6px 8px;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+.meta-editor textarea {
+	resize: vertical;
+	min-height: 72px;
+}
+
+.alias-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.alias-group.is-collapsed {
+	gap: 0;
+}
+
+.alias-group-toggle {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border: 1px solid var(--vscode-panel-border);
+	background: color-mix(in srgb, var(--vscode-editor-background) 90%, var(--vscode-sideBar-background));
+	color: var(--vscode-editor-foreground);
+	padding: 6px 8px;
+	border-radius: 6px;
+}
+
+.alias-group-title {
+	font-weight: 600;
+}
+
+.alias-group-indicator {
+	font-size: 12px;
+	opacity: 0.8;
+}
+
 .alias-list {
 	list-style: none;
 	margin: 0;

@@ -41,6 +41,8 @@ export async function addCharacter(folder: vscode.WorkspaceFolder, name: string)
 	registry.characters.push({
 		id: createId('character'),
 		name: normalizedName,
+		type: '',
+		description: '',
 		aliases: [
 			{
 				text: normalizedName,
@@ -71,6 +73,32 @@ export async function updateCharacterName(
 		throw new PanelServiceError('character_not_found', '未找到目标角色。');
 	}
 	character.name = normalizedName;
+	await saveRegistry(folder, registry);
+	return toPanelSnapshot(folder.name, registry);
+}
+
+/**
+ * 更新角色元信息（类型与描述）。
+ * @param folder 当前工作区目录对象。
+ * @param characterId 目标角色 ID。
+ * @param characterType 角色类型。
+ * @param description 角色描述。
+ * @returns 更新后的面板快照。
+ */
+export async function updateCharacterMeta(
+	folder: vscode.WorkspaceFolder,
+	characterId: string,
+	characterType: string,
+	description: string,
+): Promise<PanelSnapshot> {
+	const registry = await loadRegistry(folder);
+	const character = registry.characters.find((item) => item.id === characterId);
+	if (!character) {
+		throw new PanelServiceError('character_not_found', '未找到目标角色。');
+	}
+
+	character.type = characterType.trim();
+	character.description = description.trim();
 	await saveRegistry(folder, registry);
 	return toPanelSnapshot(folder.name, registry);
 }
@@ -221,6 +249,8 @@ function toPanelCharacter(character: CharacterEntry): PanelCharacter {
 	return {
 		id: character.id,
 		name: character.name,
+		type: character.type,
+		description: character.description,
 		aliases: character.aliases.map((alias) => toPanelAlias(alias)),
 	};
 }

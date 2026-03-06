@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { addAlias, addCharacter, getPanelSnapshot, removeAlias, removeCharacter, toServiceError, updateAliasText, updateCharacterName } from './service';
+import { addAlias, addCharacter, getPanelSnapshot, removeAlias, removeCharacter, toServiceError, updateAliasText, updateCharacterMeta, updateCharacterName } from './service';
 import { ExtToPanelMessage, PanelToExtMessage } from './types';
 
 let managerPanel: vscode.WebviewPanel | undefined;
@@ -72,6 +72,17 @@ async function handlePanelMessage(message: PanelToExtMessage): Promise<void> {
 				const snapshot = await updateCharacterName(workspaceFolder, message.characterId, message.name);
 				postMessage({ type: 'ext.snapshot', snapshot });
 				postMessage({ type: 'ext.toast', message: '角色名已更新。' });
+				return;
+			}
+			case 'panel.character.updateMeta': {
+				const snapshot = await updateCharacterMeta(
+					workspaceFolder,
+					message.characterId,
+					message.characterType,
+					message.description,
+				);
+				postMessage({ type: 'ext.snapshot', snapshot });
+				postMessage({ type: 'ext.toast', message: '角色信息已更新。' });
 				return;
 			}
 			case 'panel.character.delete': {

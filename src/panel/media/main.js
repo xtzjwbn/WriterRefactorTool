@@ -9,6 +9,7 @@
 
 	let snapshot = null;
 	let editing = null;
+	const aliasExpandedByCharacterId = new Map();
 
 	window.addEventListener('message', (event) => {
 		const message = event.data;
@@ -107,12 +108,24 @@
 		render();
 	}
 
+	function submitMetaEdit(characterId, characterType, description) {
+		vscode.postMessage({
+			type: 'panel.character.updateMeta',
+			characterId,
+			characterType: characterType.trim(),
+			description: description.trim(),
+		});
+		editing = null;
+		render();
+	}
+
 	function render() {
 		listEl.innerHTML = '';
 		if (!snapshot || !Array.isArray(snapshot.characters)) {
 			setStatus('正在加载...');
 			return;
 		}
+		syncAliasExpandedState();
 		if (snapshot.characters.length === 0 && (!editing || editing.type !== 'new-character')) {
 			const empty = document.createElement('div');
 			empty.className = 'empty';
@@ -150,6 +163,7 @@
 			const actions = document.createElement('div');
 			actions.className = 'actions';
 			actions.appendChild(createActionButton('编辑', () => beginEdit('rename-character', { characterId: character.id })));
+			actions.appendChild(createActionButton('编辑信息', () => beginEdit('edit-character-meta', { characterId: character.id })));
 			actions.appendChild(createActionButton('新增别名', () => beginEdit('new-alias', { characterId: character.id })));
 			actions.appendChild(createActionButton('删除角色', () => {
 				const confirmed = window.confirm(`删除角色“${character.name}”及其所有别名？`);
@@ -162,7 +176,45 @@
 		}
 
 		card.appendChild(header);
+		card.appendChild(renderCharacterMeta(character));
+		card.appendChild(renderAliasGroup(character));
+		return card;
+	}
 
+	function renderAliasGroup(character) {
+		const isExpanded = isAliasGroupExpanded(character);
+		const group = document.createElement('section');
+		group.className = isExpanded ? 'alias-group' : 'alias-group is-collapsed';
+
+		const toggle = document.createElement('button');
+		toggle.type = 'button';
+		toggle.className = 'alias-group-toggle';
+		toggle.setAttribute('aria-expanded', String(isExpanded));
+		toggle.addEventListener('click', () => {
+			const current = aliasExpandedByCharacterId.get(character.id);
+			const currentExpanded = typeof current === 'boolean' ? current : true;
+			aliasExpandedByCharacterId.set(character.id, !currentExpanded);
+			render();
+		});
+
+		const title = document.createElement('span');
+		title.className = 'alias-group-title';
+		title.textContent = '角色别名';
+		toggle.appendChild(title);
+
+		const indicator = document.createElement('span');
+		indicator.className = 'alias-group-indicator';
+		indicator.textContent = isExpanded ? '收起' : '展开';
+		toggle.appendChild(indicator);
+
+		group.appendChild(toggle);
+		if (isExpanded) {
+			group.appendChild(renderAliasList(character));
+		}
+		return group;
+	}
+
+	function renderAliasList(character) {
 		const aliasList = document.createElement('ul');
 		aliasList.className = 'alias-list';
 
@@ -176,7 +228,12 @@
 		character.aliases.forEach((alias) => {
 			const row = document.createElement('li');
 			row.className = 'alias-row';
-			if (editing && editing.type === 'rename-alias' && editing.aliasText === alias.text) {
+			if (
+				editing
+				&& editing.type === 'rename-alias'
+				&& editing.characterId === character.id
+				&& editing.aliasText === alias.text
+			) {
 				row.appendChild(renderInlineEditor('输入别名并回车保存', alias.text, submitEdit, cancelEdit));
 			} else {
 				const text = document.createElement('span');
@@ -198,8 +255,107 @@
 			aliasList.appendChild(row);
 		});
 
-		card.appendChild(aliasList);
-		return card;
+		return aliasList;
+	}
+
+	function isAliasGroupExpanded(character) {
+		const shouldForceExpanded = isEditingAliasInCharacter(character);
+		if (shouldForceExpanded) {
+			aliasExpandedByCharacterId.set(character.id, true);
+			return true;
+		}
+		const value = aliasExpandedByCharacterId.get(character.id);
+		if (typeof value !== 'boolean') {
+			aliasExpandedByCharacterId.set(character.id, true);
+			return true;
+		}
+		return value;
+	}
+
+	function isEditingAliasInCharacter(character) {
+		if (!editing) {
+			return false;
+		}
+		if (editing.type === 'new-alias' && editing.characterId === character.id) {
+			return true;
+		}
+		if (editing.type !== 'rename-alias') {
+			return false;
+		}
+		if (editing.characterId === character.id) {
+			return true;
+		}
+		return character.aliases.some((alias) => alias.text === editing.aliasText);
+	}
+
+	function syncAliasExpandedState() {
+		const characterIds = new Set(snapshot.characters.map((character) => character.id));
+		for (const id of aliasExpandedByCharacterId.keys()) {
+			if (!characterIds.has(id)) {
+				aliasExpandedByCharacterId.delete(id);
+			}
+		}
+	}
+
+	function renderCharacterMeta(character) {
+		const meta = document.createElement('div');
+		meta.className = 'character-meta';
+
+		if (editing && editing.type === 'edit-character-meta' && editing.characterId === character.id) {
+			meta.appendChild(renderCharacterMetaEditor(character));
+			return meta;
+		}
+
+		meta.appendChild(createMetaItem('类型', character.type));
+		meta.appendChild(createMetaItem('描述', character.description));
+		return meta;
+	}
+
+	function createMetaItem(label, value) {
+		const row = document.createElement('div');
+		row.className = 'meta-row';
+
+		const name = document.createElement('span');
+		name.className = 'meta-label';
+		name.textContent = `${label}：`;
+		row.appendChild(name);
+
+		const text = document.createElement('span');
+		text.className = value ? 'meta-value' : 'meta-value empty';
+		text.textContent = value || '空';
+		row.appendChild(text);
+		return row;
+	}
+
+	function renderCharacterMetaEditor(character) {
+		const editor = document.createElement('div');
+		editor.className = 'meta-editor';
+
+		const typeInput = document.createElement('input');
+		typeInput.type = 'text';
+		typeInput.placeholder = '输入角色类型';
+		typeInput.value = character.type || '';
+		editor.appendChild(typeInput);
+
+		const descriptionInput = document.createElement('textarea');
+		descriptionInput.placeholder = '输入角色描述';
+		descriptionInput.value = character.description || '';
+		descriptionInput.rows = 3;
+		editor.appendChild(descriptionInput);
+
+		const actions = document.createElement('div');
+		actions.className = 'actions';
+		actions.appendChild(createActionButton('保存信息', () => {
+			submitMetaEdit(character.id, typeInput.value, descriptionInput.value);
+		}));
+		actions.appendChild(createActionButton('取消', cancelEdit));
+		editor.appendChild(actions);
+
+		window.setTimeout(() => {
+			typeInput.focus();
+			typeInput.select();
+		}, 0);
+		return editor;
 	}
 
 	function renderInlineEditor(placeholder, initialValue, onSubmit, onCancel) {

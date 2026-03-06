@@ -5,6 +5,8 @@ export interface PanelAlias {
 export interface PanelCharacter {
 	id: string;
 	name: string;
+	type: string;
+	description: string;
 	aliases: PanelAlias[];
 }
 
@@ -23,6 +25,7 @@ export type PanelToExtMessage =
 	| { type: 'panel.refresh' }
 	| { type: 'panel.character.add'; name: string }
 	| { type: 'panel.character.rename'; characterId: string; name: string }
+	| { type: 'panel.character.updateMeta'; characterId: string; characterType: string; description: string }
 	| { type: 'panel.character.delete'; characterId: string; confirm: boolean }
 	| { type: 'panel.alias.add'; characterId: string; text: string }
 	| { type: 'panel.alias.rename'; characterId: string; aliasText: string; text: string }
