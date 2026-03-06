@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { findCharacterCandidates, isAliasRegistered } from './character';
 import { updateEditorHighlight } from './highlight';
+import { openCharacterManagerPanel } from './panel/webview';
 import { createId, ensureRegistryExists, getRegistryUri, loadRegistry, saveRegistry } from './registry';
 import { CharacterEntry } from './types';
 
@@ -32,6 +33,11 @@ export function registerCommands(context: vscode.ExtensionContext): void {
 	);
 	context.subscriptions.push(
 		vscode.commands.registerCommand('writerRefactor.openRegistry', openRegistry),
+	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand('writerRefactor.openCharacterManager', () => {
+			openCharacterManagerPanel(context);
+		}),
 	);
 }
 

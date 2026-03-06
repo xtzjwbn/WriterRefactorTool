@@ -35,7 +35,8 @@
     "onCommand:writerRefactor.unregisterSelectedAlias",
     "onCommand:writerRefactor.unregisterSelectedCharacter",
     "onCommand:writerRefactor.renameSelectedEntry",
-    "onCommand:writerRefactor.openRegistry"
+    "onCommand:writerRefactor.openRegistry",
+    "onCommand:writerRefactor.openCharacterManager"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -63,6 +64,10 @@
       {
         "command": "writerRefactor.openRegistry",
         "title": "Writer Refactor: 打开注册表 JSON"
+      },
+      {
+        "command": "writerRefactor.openCharacterManager",
+        "title": "Writer Refactor: 打开角色管理面板"
       }
     ],
     "menus": {

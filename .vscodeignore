@@ -1,6 +1,9 @@
 .vscode/**
 .vscode-test/**
 src/**
+!src/panel/
+!src/panel/media/
+!src/panel/media/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md

@@ -1,0 +1,139 @@
+:root {
+	color-scheme: light dark;
+}
+
+body {
+	margin: 0;
+	padding: 12px;
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-editor-foreground);
+	background: var(--vscode-editor-background);
+}
+
+.toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.toolbar-title {
+	font-weight: 600;
+}
+
+.toolbar-actions {
+	display: flex;
+	gap: 8px;
+}
+
+button {
+	border: 1px solid var(--vscode-button-border, transparent);
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	padding: 4px 10px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+button:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.status {
+	margin-bottom: 8px;
+	opacity: 0.85;
+}
+
+.toast {
+	margin-bottom: 10px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	background: var(--vscode-textCodeBlock-background);
+}
+
+.toast.error {
+	background: color-mix(in srgb, var(--vscode-inputValidation-errorBackground) 65%, transparent);
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.empty {
+	opacity: 0.8;
+	padding: 12px;
+	border: 1px dashed var(--vscode-panel-border);
+	border-radius: 8px;
+}
+
+.character-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.character-card {
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 8px;
+	padding: 8px;
+	background: color-mix(in srgb, var(--vscode-editor-background) 85%, var(--vscode-sideBar-background));
+}
+
+.character-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+.character-title {
+	font-weight: 600;
+}
+
+.alias-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.alias-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-sideBar-background));
+}
+
+.alias-text {
+	word-break: break-all;
+}
+
+.actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.action-btn {
+	padding: 2px 8px;
+	font-size: 12px;
+}
+
+.inline-editor {
+	width: 100%;
+}
+
+.inline-editor input {
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border: 1px solid var(--vscode-input-border);
+	border-radius: 6px;
+	padding: 6px 8px;
+}
