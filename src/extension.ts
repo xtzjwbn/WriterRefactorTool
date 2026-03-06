@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { getRegisteredAliasTexts, isAliasRegistered } from './character';
+import { registerAliasCompletionProvider } from './completion';
 import { registerCommands } from './commands';
 import { disposeHighlightDecorations, refreshHighlightDecorations, setCommandContexts, updateEditorHighlight } from './highlight';
 import { registerCharacterHoverProvider } from './hover';
@@ -18,6 +19,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	refreshHighlightDecorations();
 
 	registerCommands(context);
+	registerAliasCompletionProvider(context);
 	registerCharacterHoverProvider(context);
 
 	context.subscriptions.push(
