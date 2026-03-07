@@ -139,6 +139,17 @@
             }
           }
         },
+        "writerRefactor.completion.pinyinEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable alias completion by pinyin keys (full pinyin and initials)."
+        },
+        "writerRefactor.completion.pinyinMinChars": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "description": "Minimum query length for pinyin-based completion."
+        },
         "writerRefactor.highlightColors": {
           "type": "object",
           "default": {
@@ -211,6 +222,9 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
+  },
+  "dependencies": {
+    "pinyin-pro": "^3.0.0"
   },
   "devDependencies": {
     "@types/vscode": "^1.106.0",

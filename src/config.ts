@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { ExcludeRules, HighlightColorRule, HighlightColors, MatchMode } from './types';
 
 export const DEFAULT_REGISTRY_PATH = 'registry.json';
+const DEFAULT_PINYIN_COMPLETION_MIN_CHARS = 2;
 
 const DEFAULT_HIGHLIGHT_COLORS: HighlightColors = {
 	strong: {
@@ -98,4 +99,24 @@ export function resolveColor(value: string): string | vscode.ThemeColor {
 		}
 	}
 	return value;
+}
+
+/**
+ * 读取拼音补全开关，默认开启。
+ * @returns true 表示启用拼音参与补全。
+ */
+export function isPinyinCompletionEnabled(): boolean {
+	return vscode.workspace.getConfiguration('writerRefactor').get<boolean>('completion.pinyinEnabled') !== false;
+}
+
+/**
+ * 读取拼音补全触发最小字符数，非法值时回退到默认值。
+ * @returns 拼音补全最小触发字符数，最小为 1。
+ */
+export function getPinyinCompletionMinChars(): number {
+	const value = vscode.workspace.getConfiguration('writerRefactor').get<number>('completion.pinyinMinChars');
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
+		return DEFAULT_PINYIN_COMPLETION_MIN_CHARS;
+	}
+	return Math.max(1, Math.floor(value));
 }
