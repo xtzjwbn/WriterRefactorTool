@@ -7,6 +7,11 @@ import { disposeHighlightDecorations, refreshHighlightDecorations, setCommandCon
 import { registerCharacterHoverProvider } from './hover';
 import { findRegisteredTargetAtPosition, findMatchRanges, findWorkspaceTextUris, isSupportedDocument } from './matcher';
 import { loadRegistry, saveRegistry, setRegistryStorageRoot } from './registry';
+import { countVisibleChars, isCountableDocument, ProjectWordCountIndex, TypingSpeedTracker } from './wordStats';
+
+const REFRESH_DEBOUNCE_MS = 100;
+const SPEED_REFRESH_INTERVAL_MS = 30_000;
+const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
 
 /**
  * 扩展入口：初始化状态、注册命令、挂载重命名与编辑器事件。
@@ -21,6 +26,82 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	registerCommands(context);
 	registerAliasCompletionProvider(context);
 	registerCharacterHoverProvider(context);
+
+	const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 20);
+	statusBar.show();
+	context.subscriptions.push(statusBar);
+
+	const projectIndex = new ProjectWordCountIndex();
+	const speedTracker = new TypingSpeedTracker();
+	const documentSnapshots = new Map<string, string>();
+	let refreshTimer: NodeJS.Timeout | undefined;
+	for (const document of vscode.workspace.textDocuments) {
+		if (!isCountableDocument(document)) {
+			continue;
+		}
+		documentSnapshots.set(document.uri.toString(), document.getText());
+	}
+
+	const refreshStatusBar = (): void => {
+		const activeEditor = vscode.window.activeTextEditor;
+		const projectText = projectIndex.isInitialized() ? formatNumber(projectIndex.getTotal()) : '...';
+		const speedText = formatNumber(speedTracker.getNetPerHour());
+
+		if (!activeEditor || !isCountableDocument(activeEditor.document)) {
+			statusBar.text = `项目 ${projectText} | 当前 - | 速度 ${speedText} 字/小时`;
+			return;
+		}
+
+		const selectedChars = getSelectedVisibleChars(activeEditor);
+		if (selectedChars > 0) {
+			statusBar.text = `项目 ${projectText} | 选中 ${formatNumber(selectedChars)} | 速度 ${speedText} 字/小时`;
+			return;
+		}
+
+		const docCount = projectIndex.getCount(activeEditor.document.uri)
+			?? countVisibleChars(activeEditor.document.getText());
+		statusBar.text = `项目 ${projectText} | 当前 ${formatNumber(docCount)} | 速度 ${speedText} 字/小时`;
+	};
+
+	const scheduleRefresh = (): void => {
+		if (refreshTimer) {
+			clearTimeout(refreshTimer);
+		}
+		refreshTimer = setTimeout(() => {
+			refreshTimer = undefined;
+			refreshStatusBar();
+		}, REFRESH_DEBOUNCE_MS);
+	};
+
+	const rebuildProjectIndex = async (): Promise<void> => {
+		await projectIndex.initialize(() => {
+			scheduleRefresh();
+		});
+		documentSnapshots.clear();
+		for (const document of vscode.workspace.textDocuments) {
+			if (!isCountableDocument(document)) {
+				continue;
+			}
+			documentSnapshots.set(document.uri.toString(), document.getText());
+			projectIndex.updateOpenDocument(document.uri, document.getText());
+		}
+		scheduleRefresh();
+	};
+
+	void rebuildProjectIndex();
+
+	const speedInterval = setInterval(() => {
+		scheduleRefresh();
+	}, SPEED_REFRESH_INTERVAL_MS);
+	context.subscriptions.push({
+		dispose: () => {
+			clearInterval(speedInterval);
+			if (refreshTimer) {
+				clearTimeout(refreshTimer);
+				refreshTimer = undefined;
+			}
+		},
+	});
 
 	context.subscriptions.push(
 		vscode.languages.registerRenameProvider(
@@ -96,6 +177,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	context.subscriptions.push(
 		vscode.window.onDidChangeTextEditorSelection(async (event) => {
+			scheduleRefresh();
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 			if (!workspaceFolder) {
 				await setCommandContexts(false, false, false, false, false);
@@ -107,9 +189,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+			scheduleRefresh();
 			if (!editor) {
 				await setCommandContexts(false, false, false, false, false);
 				return;
+			}
+			if (isCountableDocument(editor.document)) {
+				documentSnapshots.set(editor.document.uri.toString(), editor.document.getText());
+				projectIndex.updateOpenDocument(editor.document.uri, editor.document.getText());
 			}
 			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 			if (!workspaceFolder) {
@@ -117,6 +204,85 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				return;
 			}
 			await updateEditorHighlight(editor, workspaceFolder);
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeTextDocument((event) => {
+			if (!isCountableDocument(event.document)) {
+				return;
+			}
+			const key = event.document.uri.toString();
+			const previousText = documentSnapshots.get(key);
+			if (typeof previousText !== 'string') {
+				documentSnapshots.set(key, event.document.getText());
+				projectIndex.updateOpenDocument(event.document.uri, event.document.getText());
+				scheduleRefresh();
+				return;
+			}
+			const delta = getNetVisibleDelta(previousText, event.contentChanges);
+			documentSnapshots.set(key, event.document.getText());
+			projectIndex.updateOpenDocument(event.document.uri, event.document.getText());
+
+			const activeUri = vscode.window.activeTextEditor?.document.uri.toString();
+			if (activeUri === key) {
+				speedTracker.push(delta);
+			}
+			scheduleRefresh();
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidCreateFiles(async (event) => {
+			for (const file of event.files) {
+				if (!projectIndex.isCountableUri(file)) {
+					continue;
+				}
+				try {
+					const document = await vscode.workspace.openTextDocument(file);
+					documentSnapshots.set(file.toString(), document.getText());
+					projectIndex.updateOpenDocument(file, document.getText());
+				} catch {
+					// Ignore unreadable files.
+				}
+			}
+			scheduleRefresh();
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidDeleteFiles((event) => {
+			for (const file of event.files) {
+				documentSnapshots.delete(file.toString());
+				projectIndex.remove(file);
+			}
+			scheduleRefresh();
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidRenameFiles(async (event) => {
+			for (const file of event.files) {
+				documentSnapshots.delete(file.oldUri.toString());
+				projectIndex.remove(file.oldUri);
+				if (!projectIndex.isCountableUri(file.newUri)) {
+					continue;
+				}
+				try {
+					const document = await vscode.workspace.openTextDocument(file.newUri);
+					documentSnapshots.set(file.newUri.toString(), document.getText());
+					projectIndex.updateOpenDocument(file.newUri, document.getText());
+				} catch {
+					// Ignore unreadable files.
+				}
+			}
+			scheduleRefresh();
+		}),
+	);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeWorkspaceFolders(() => {
+			void rebuildProjectIndex();
 		}),
 	);
 
@@ -134,6 +300,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			await updateEditorHighlight(editor, workspaceFolder);
 		}),
 	);
+
+	scheduleRefresh();
 }
 
 /**
@@ -142,4 +310,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  */
 export function deactivate(): void {
 	disposeHighlightDecorations();
+}
+
+function formatNumber(value: number): string {
+	return NUMBER_FORMAT.format(value);
+}
+
+function getSelectedVisibleChars(editor: vscode.TextEditor): number {
+	let total = 0;
+	for (const selection of editor.selections) {
+		if (selection.isEmpty) {
+			continue;
+		}
+		total += countVisibleChars(editor.document.getText(selection));
+	}
+	return total;
+}
+
+function getNetVisibleDelta(previousText: string, changes: readonly vscode.TextDocumentContentChangeEvent[]): number {
+	let current = previousText;
+	let delta = 0;
+	for (const change of changes) {
+		const beforeSlice = current.slice(change.rangeOffset, change.rangeOffset + change.rangeLength);
+		delta += countVisibleChars(change.text) - countVisibleChars(beforeSlice);
+		current = current.slice(0, change.rangeOffset) + change.text + current.slice(change.rangeOffset + change.rangeLength);
+	}
+	return delta;
 }
